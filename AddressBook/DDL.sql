@@ -99,53 +99,95 @@ SELECT IIF('A' != N'A', 1, 0)
 */
 
 GO 
-CREATE TABLE [AddressBook].[dbo].[City] 
+CREATE TABLE [AddressBook].[dbo].[City] --268 Octets par enregistrement  -> 84 octets
 (
 	--<COLUMN_NAME>	<TYPE>			[NULL|NOT NULL]	[IDENTITY]
-	[Identifier]	BIGINT			NOT NULL		IDENTITY --IDENTITY => incrément automatique
-	,[Name]			NVARCHAR(100)	NOT NULL
-	,[ZipCode]		NVARCHAR(30)	NOT NULL
+	[Identifier]	INT			NOT NULL		IDENTITY --IDENTITY => incrément automatique  4 Octets
+	,[Name]			VARCHAR(50)	NOT NULL                                              --50 Octets 
+	,[ZipCode]		VARCHAR(30)	NOT NULL                                            -- 30 Octets
 )
 GO
-CREATE TABLE [AddressBook].[dbo].[Civility] 
+CREATE TABLE [AddressBook].[dbo].[Civility] --98 Octets -> 49 Octets
 (
-	[Identifier]	BIGINT			NOT NULL	IDENTITY
-	,[ShortName]	NVARCHAR(5)		NOT NULL
-	,[Name]			NVARCHAR(40)	NOT NULL
-)
-
-GO
-CREATE TABLE [AddressBook].[dbo].[Contact] 
-(
-	[Identifier]			BIGINT			NOT NULL	IDENTITY
-	,[IdentifierCivility]	BIGINT			NULL
-	,[FirstName]			NVARCHAR(100)	NULL
-	,[LastName]				NVARCHAR(100)	NOT NULL
-	,[BirthDate]			DATE			NULL
-	,[EMail]				NVARCHAR(100)	NULL
+	[Identifier]	INT			NOT NULL	IDENTITY  -- 4 Octets
+	,[ShortName]	VARCHAR(5)		NOT NULL          --5 Octets
+	,[Name]			VARCHAR(40)	NOT NULL            --40 Octets
 )
 
 GO
-CREATE TABLE [AddressBook].[dbo].[Address] 
+CREATE TABLE [AddressBook].[dbo].[Contact] --619 Octets -> 211 Octets
 (
-	[Identifier]		BIGINT			NOT NULL	IDENTITY
-	,[IdentifierCity]	BIGINT			NOT NULL
-	,[StreetNumber]		NVARCHAR(10)	NULL
-	,[RoadType]			NVARCHAR(50)	NOT NULL
-	,[RoadName]			NVARCHAR(4000)	NULL
-	,[Complement1]		NVARCHAR(2000)	NULL
-	,[Complement2]		NVARCHAR(200)	NULL
-	,[Latitude]			DECIMAL(7,5)	NULL
-	,[Longitude]		DECIMAL(7,5)	NULL
+	[Identifier]			INT			NOT NULL	IDENTITY  --  4 Octets
+	,[IdentifierCivility]	INT			NULL            --  4 Octets
+	,[FirstName]			VARCHAR(50)	NULL              --50 Octets
+	,[LastName]				VARCHAR(50)	NOT NULL          --50 Octets
+	,[BirthDate]			DATE			NULL                  --  3 Octets
+	,[EMail]				VARCHAR(100)	NULL                --100 Octets
 )
 
 GO
-CREATE TABLE [AddressBook].[dbo].[AddressContact] 
+CREATE TABLE [AddressBook].[dbo].[Address] --12546 Octets -> 678 Octets
 (
-	[Identifier]			BIGINT		NOT NULL	IDENTITY
-	,[IdentifierAddress]	BIGINT		NOT NULL
-	,[IdentifierContact]	BIGINT		NOT NULL
+	[Identifier]		INT			NOT NULL	IDENTITY      --   4 Octets
+	,[IdentifierCity]	INT			NOT NULL              --   4 Octets
+	,[StreetNumber]		VARCHAR(10)	NULL              --  10 Octets
+	,[RoadType]			VARCHAR(50)	NOT NULL            --  50 Octets
+	,[RoadName]			VARCHAR(200)	NULL              -- 200 Octets
+	,[Complement1]		VARCHAR(200)	NULL            -- 200 Octets
+	,[Complement2]		VARCHAR(200)	NULL            -- 200 Octets
+	,[Latitude]			DECIMAL(9,7)	NULL              --   5 Octets
+	,[Longitude]		DECIMAL(9,7)	NULL              --   5 Octets
 )
 
+GO
+CREATE TABLE [AddressBook].[dbo].[AddressContact] --24 Octets -> 12 Octets
+(
+	[Identifier]			INT		NOT NULL	IDENTITY  --4 octets
+	,[IdentifierAddress]	INT		NOT NULL        --4 octets
+	,[IdentifierContact]	INT		NOT NULL        --4 octets
+)
+
+GO
+ALTER TABLE [AddressBook].[dbo].[Address]
+ADD
+	--[Code] NVARCHAR(30) NULL --S'il existe des enregistrement, les nouveaux champs doivent être NULL
+	--[Code] NVARCHAR(30) NOT NULL DEFAULT (N'0000')     
+	[Code] VARCHAR(30) NOT NULL CONSTRAINT [DF_Address_Code] DEFAULT ('0000')
+
+ALTER TABLE [AddressBook].[dbo].[City]
+ADD
+	[IsActive] BIT NOT NULL CONSTRAINT [DF_City_IsActive] DEFAULT (0)
 
 
+GO
+ALTER TABLE [AddressBook].[dbo].[Address] DROP CONSTRAINT [DF_Address_Code]
+
+
+/*
+Les contraintes ont pour but de programmer les règles de gestion au niveau des colonnes.
+On peut les déclarer en même temps que la table (inline constraints).
+Il est préférable de les déclarer séparément pur ne pas avoir à respecter un ordre de création des tables.
+
+Chaque contrainte peut s'apliquer à une ou plusieurs colonnes (couple, triplets...)
+
+	UNIQUE (UK) :		Impose une valeur distrinct pour chaque enregistrement. Les valeurs NULL sont autorisées.
+	PRIMARY KEY (PK) :	Clé primaire de la table. Les valeurs ne peuvent être ni NULL ni identiques.
+						Un index CLUSTURED est généré auomatiquement.
+	FOREIGN KEY (FK) :	Clé étrangère, permet de maintenir l'intégrité référentielle.
+						Attention, aucun index n'est généré automatiquement.
+	DEFAULT (DF) :		Valeur par défaut.
+	CHECK (CK) :		Impose un domaine de valeurs ou un condition entre colonnes
+*/
+
+--ALTER TABLE [AddressBook].[dbo].[City]
+--ADD CONSTRAINT [PK_City_Identifier]
+--PRIMARY KEY ( [Identifier] )
+
+DECLARE @Query NVARCHAR(MAX) = 'SELECT ''COUCOU'' ';
+
+EXEC sp_executesql @Query
+
+SELECT
+  *
+FROM
+  sys.tables AS t0
