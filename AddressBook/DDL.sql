@@ -1,6 +1,8 @@
 --DDL : Data Definition Language
 --CREATE, DROP, ALTER
 
+SET NOCOUNT ON
+
 USE [master]
 
 GO
@@ -208,7 +210,7 @@ CURSOR FOR
     )
   FROM
     sys.tables AS t0
-  INNER JOIN
+  INNER JOINw
     sys.columns AS t1 ON t0.object_id = t1.object_id AND t1.name = 'Identifier'
 
 
@@ -491,3 +493,78 @@ TODO : Générer un jeu de résultat avec 1200 lignes aléatoires :
 | ...   |
 
 */
+
+IF OBJECT_ID('tempdb..#FirstName') IS NOT NULL BEGIN DROP TABLE #FirstName END
+
+SELECT
+	Name
+	,ROW_NUMBER() OVER (ORDER BY Name) AS Identifier
+INTO
+	#FirstName
+FROM
+(
+	SELECT N'A' AS Name UNION ALL
+	SELECT N'B' AS Name UNION ALL
+	SELECT N'C' AS Name UNION ALL
+	SELECT N'D' AS Name UNION ALL
+	SELECT N'E' AS Name UNION ALL
+	SELECT N'F' AS Name UNION ALL
+	SELECT N'G' AS Name UNION ALL
+	SELECT N'H' AS Name UNION ALL
+	SELECT N'I' AS Name UNION ALL
+	SELECT N'J' AS Name
+) AS t0
+
+IF OBJECT_ID('tempdb..#LastName') IS NOT NULL BEGIN DROP TABLE #LastName END
+
+SELECT
+	Name
+	,ROW_NUMBER() OVER (ORDER BY Name) AS Identifier
+INTO
+	#LastName
+FROM
+(
+	SELECT N'AA' AS Name UNION ALL
+	SELECT N'BB' AS Name UNION ALL
+	SELECT N'CC' AS Name UNION ALL
+	SELECT N'DD' AS Name UNION ALL
+	SELECT N'EE' AS Name UNION ALL
+	SELECT N'FF' AS Name UNION ALL
+	SELECT N'GG' AS Name UNION ALL
+	SELECT N'HH' AS Name UNION ALL
+	SELECT N'II' AS Name UNION ALL
+	SELECT N'JJ' AS Name
+) AS t0
+
+DECLARE @MaxFirstName INT;
+DECLARE @MaxLastName INT;
+
+SELECT @MaxFirstName = COUNT(Identifier) FROM #FirstName
+SELECT @MaxLastName = COUNT(Identifier) FROM #LastName
+
+
+IF OBJECT_ID('tempdb..#TempId') IS NOT NULL BEGIN DROP TABLE #TempId END
+
+  SELECT
+    t0.Value
+    ,(ABS(CHECKSUM(NEWID())) % (@MaxFirstName)) + 1 AS FirstNameId
+    ,(ABS(CHECKSUM(NEWID())) % (@MaxLastName)) + 1  AS LastNameId
+    ,ABS(CHECKSUM(NEWID())) % (DATEDIFF(DAY, DATEFROMPARTS(1920, 1, 1), CAST(GETDATE() AS DATE))) AS RandDate
+  INTO
+    #TempId
+  FROM
+    Number AS t0
+  WHERE
+    t0.Value < 100
+
+SELECT
+  t1.Name   AS FirstName
+  ,t2.Name  AS LastName
+  ,DATEADD(DAY, t0.RandDate, DATEFROMPARTS(1920, 1, 1)) AS BirthDate
+FROM
+  #TempId AS t0
+INNER JOIN
+  #FirstName AS t1 ON t0.FirstNameId = t1.Identifier
+INNER JOIN
+  #LastName AS t2 ON t0.LastNameId = t2.Identifier
+  
