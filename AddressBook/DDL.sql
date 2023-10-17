@@ -183,11 +183,105 @@ Chaque contrainte peut s'apliquer à une ou plusieurs colonnes (couple, triplets.
 --ADD CONSTRAINT [PK_City_Identifier]
 --PRIMARY KEY ( [Identifier] )
 
+
+/*
 DECLARE @Query NVARCHAR(MAX) = 'SELECT ''COUCOU'' ';
 
 EXEC sp_executesql @Query
 
+
+DECLARE
+  query_cursor 
+CURSOR FOR 
+  SELECT
+    CONCAT
+    (
+      'ALTER TABLE [AddressBook].[dbo].['
+      , t0.name
+      , '] ADD CONSTRAINT [PK_'
+      , t0.name
+      , '_'
+      , t1.name
+      , '] PRIMARY KEY (['
+      , t1.name
+      ,'])'
+    )
+  FROM
+    sys.tables AS t0
+  INNER JOIN
+    sys.columns AS t1 ON t0.object_id = t1.object_id AND t1.name = 'Identifier'
+
+
+OPEN query_cursor
+
+FETCH NEXT FROM
+  query_cursor
+INTO
+  @Query
+
+WHILE @@FETCH_STATUS = 0  
+BEGIN 
+
+  PRINT @Query
+  --EXEC sp_executesql @Query
+
+  FETCH NEXT FROM
+    query_cursor
+  INTO
+    @Query
+
+END
+
+*/
+
+DECLARE @Query NVARCHAR(MAX)
+
 SELECT
-  *
+  @Query = STRING_AGG(t0.Query, CHAR(10) + CHAR(13))
 FROM
-  sys.tables AS t0
+(
+  SELECT
+    CONCAT
+    (
+      'ALTER TABLE [AddressBook].[dbo].['
+      , t0.name
+      , '] ADD CONSTRAINT [PK_'
+      , t0.name
+      , '_'
+      , t1.name
+      , '] PRIMARY KEY (['
+      , t1.name
+      ,'])'
+    ) AS Query
+  FROM
+    sys.tables AS t0
+  INNER JOIN
+    sys.columns AS t1 ON t0.object_id = t1.object_id AND t1.name = 'Identifier'
+) AS t0
+
+EXEC sp_executesql @Query
+
+
+--Il existe plusieurs manières de concaténer, la différence ce situe dans la gestion des valeurs NULL.
+SELECT
+	'MaVariable' + NULL					--NULL l'emporte sur la valeur avec +
+	,'MaVariable' + ISNULL(NULL, '')
+	,CONCAT('MaVariable', NULL)
+
+SELECT 
+	'MaVariable'	-- ASCII
+	,N'MaVariable'	-- UNICODE
+
+--FK
+/*
+Intégrité référentielle
+
+Actions à mener sur UPDATE | DELETE sur la/les colonne(s) référencée(s)
+CASCADE :		Répercute sur les enregistrements liés.
+SET NULL :		Donne pour valeur NULL aux lignes de la clef étrangère qui pointent sur l'enregistrement affecté.
+				Possible seulement si la/les colonne(s) FK accepte(ent) le marqueur NULL.
+SET DEFAULT :	Applique la valeur par défaut aux lignes de la clef étrangère qui pointent sur l'enregistrement affecté.
+				Possible seulement si la/les colonne(s) FK ont une contrainte DEFAULT.
+NO ACTION :		Déclenche une erreur si l'enregistrement est référencé par la clef étrangère. (comportement par défaut)
+
+*/
