@@ -372,4 +372,122 @@ INCLUDE
 )
 
 
+DECLARE @Query NVARCHAR(MAX)
+
+SELECT
+  @Query = STRING_AGG(t0.Query, CHAR(13))
+FROM
+(
+  SELECT
+    CONCAT(N'CREATE NONCLUSTERED INDEX [IX_', t0.TableName, N'_', t0.ColumnName ,N'] ON [AddressBook].[dbo].[', t0.TableName ,N'] 
+    (
+      [', t0.ColumnName, N']
+    )') AS Query
+  FROM
+  (
+    SELECT
+      t1.name                             AS TableName
+      ,t0.name                            AS ColumnName
+      ,RIGHT(t0.name, LEN(t0.name) - 10)  AS SourceTableName
+    FROM
+      sys.Columns AS t0
+    INNER JOIN
+      sys.tables AS t1 ON t0.object_id = t1.object_id
+    WHERE
+      t0.name LIKE N'Identifier_%'
+  ) AS t0
+) AS t0
+
+PRINT @Query
+EXEC sp_executesql @Query;
+
+
 GO
+
+
+
+--SELECT (ABS(CHECKSUM(NewId())) % 10) + 1 AS RandomNumber
+--UNION ALL
+--SELECT (ABS(CHECKSUM(NewId())) % 10) + 1 AS RandomNumber
+--UNION ALL
+--SELECT (ABS(CHECKSUM(NewId())) % 10) + 1 AS RandomNumber
+--UNION ALL
+--SELECT (ABS(CHECKSUM(NewId())) % 10) + 1 AS RandomNumber
+--UNION ALL
+--SELECT (ABS(CHECKSUM(NewId())) % 10) + 1 AS RandomNumber
+
+
+DECLARE @value INT = 0;
+CREATE TABLE Number (
+	Value INT NOT NULL PRIMARY KEY
+)
+
+WHILE @value < 4000
+BEGIN
+
+	INSERT INTO Number ( Value ) SELECT @value
+
+	SET @value = @value + 1;
+END
+
+GO
+
+SELECT Value FROM Number WHERE Value < 1200
+
+--Active ou désactive les statistiques de temps ou d'entrée / sortie
+--SET STATISTICS IO (ON | OFF)
+--SET STATISTICS TIME (ON | OFF)
+
+
+DECLARE @ItemCount INT = 5;
+DECLARE @CurrentIndex INT = 0;
+
+CREATE TABLE #TempTable (
+  RandomNumber INT NOT NULL
+)
+
+WHILE @ItemCount > @CurrentIndex
+BEGIN
+
+  INSERT INTO #TempTable ( RandomNumber ) VALUES ( (ABS(CHECKSUM(NewId())) % 10) + 1 )
+  SET @CurrentIndex = @CurrentIndex + 1
+
+END
+
+SELECT RandomNumber FROM #TempTable
+
+DROP TABLE #TempTable
+
+GO
+
+DECLARE @ItemCount INT = 5;
+--SELECT TOP(@ItemCount) (ABS(CHECKSUM(NewId())) % 10) + 1  AS RandomNumber FROM sys.Columns
+SELECT Value FROM Number WHERE Value < 1200
+SELECT TOP(1200) Value FROM Number
+
+
+SELECT
+  (ABS(CHECKSUM(NewId())) % 10) + 1  AS RandomNumber
+FROM
+(
+  SELECT
+    ROW_NUMBER() OVER (ORDER BY t0.name) AS RowNum
+  FROM
+    sys.columns AS t0
+) AS t0
+WHERE
+  t0.RowNum <= @ItemCount
+
+
+  
+
+/*
+TODO : Générer un jeu de résultat avec 1200 lignes aléatoires :
+
+| Name  |
+|-------|
+| Jean  | < Prénom choisi aléatoirement parmis une liste de 25 prénom prédéfinie
+| Alain |
+| ...   |
+
+*/
