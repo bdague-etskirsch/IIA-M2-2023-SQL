@@ -568,3 +568,10 @@ INNER JOIN
 INNER JOIN
   #LastName AS t2 ON t0.LastNameId = t2.Identifier
   
+  
+GO
+ALTER TABLE [dbo].[Contact]
+	ADD FullName AS (CONCAT(FirstName + N' ', LastName)) PERSISTED
+ 
+ALTER TABLE [dbo].[Contact]
+	ADD Age AS (CAST(DATEDIFF(DAY, BirthDate, GETDATE()) / 365.25 AS INT))

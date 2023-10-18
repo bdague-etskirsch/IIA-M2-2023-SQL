@@ -1,3 +1,4 @@
+SET NOCOUNT ON
 /***
 	DML : Data Manipulation Language
 ***/

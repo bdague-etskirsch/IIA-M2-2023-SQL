@@ -1,3 +1,5 @@
+SET NOCOUNT ON
+
 --Data Query Language
 
 --Retourner l'ensemble des villes avec le nom et le code postal
@@ -112,15 +114,15 @@ SELECT * FROM City AS t0 WHERE t0.Name LIKE '[^a-l]%'
 
 --Attention LIKE '%...' sont des requêtes qui n'utilisent pas les indexes
 
-SELECT
-	CAST(t0.Char AS INT)
-FROM
-(
-	SELECT '6' AS Char UNION ALL
-	SELECT '.' AS Char --Attention, ISNUMERIC(..) retourne 1 pour '.' ou ','
-) AS t0
-WHERE
-	ISNUMERIC(t0.Char) = 1 -- On ne consèrve que les numéros
+--SELECT
+--	CAST(t0.Char AS INT)
+--FROM
+--(
+--	SELECT '6' AS Char UNION ALL
+--	SELECT '.' AS Char --Attention, ISNUMERIC(..) retourne 1 pour '.' ou ','
+--) AS t0
+--WHERE
+--	ISNUMERIC(t0.Char) = 1 -- On ne consèrve que les numéros
 
 	
 
@@ -530,35 +532,141 @@ GO
 Pour la projection des exo 1 à 4 : Contact.FullName et Civility.ShortName
 1 : Pour chaque persone, afficher la civilité associée, garder également les personnes sans civiltié
 */
+	SELECT
+		t0.FullName
+		,t1.ShortName
+	FROM
+		Contact AS t0
+	LEFT JOIN
+		Civility AS t1 ON t0.IdentifierCivility = t1.Identifier
+
 
 /*
 2 : Afficher les personnes sans civilité
 */
+	SELECT
+		t0.FullName
+		,t1.ShortName
+	FROM
+		Contact AS t0
+	LEFT JOIN
+		Civility AS t1 ON t0.IdentifierCivility = t1.Identifier
+	WHERE
+		t1.Identifier IS NULL
+
+	SELECT
+		t0.FullName
+		--,NULL AS ShortName --Attention au type de données qui est inconu ici
+		,CAST(NULL AS VARCHAR(30)) AS ShortName
+	FROM
+		Contact AS t0
+	WHERE
+		t0.IdentifierCivility IS NULL
+
 
 /*
 3 : Pour chaque civilité, afficher les personnes associées, garder les civilités sans personne
 */
+	SELECT
+		t1.FullName
+		,t0.ShortName
+	FROM
+		Civility AS t0
+	LEFT JOIN
+		Contact AS t1 ON t0.Identifier = t1.IdentifierCivility
 
+	SELECT
+		t0.ShortName
+		,STRING_AGG(t1.FullName, '; ') AS FullName
+	FROM
+		Civility AS t0
+	LEFT JOIN
+		Contact AS t1 ON t0.Identifier = t1.IdentifierCivility
+  GROUP BY
+    t0.ShortName
+
+	SELECT
+		t0.FullName
+		,t1.ShortName
+	FROM
+		Contact AS t0
+	RIGHT JOIN
+		Civility AS t1 ON t0.IdentifierCivility = t1.Identifier
 
 
 /*
-4 : Afficher les cvivilité sans personne
+4 : Afficher les civilités sans personne
 */
+	SELECT
+		t1.FullName
+		,t0.ShortName
+	FROM
+		Civility AS t0
+	LEFT JOIN
+		Contact AS t1 ON t0.Identifier = t1.IdentifierCivility
+	WHERE
+		t1.Identifier IS NULL
+
+	SELECT
+		t0.FullName
+		,t1.ShortName
+	FROM
+		Contact AS t0
+	RIGHT JOIN
+		Civility AS t1 ON t0.IdentifierCivility = t1.Identifier
+	WHERE
+		t0.Identifier IS NULL
+
 
 /*
 5 : Pour chaque code postal, afficher le nombre de contact
 	5.A : les codes postaux sans contact doivent être affichés
 	*/
-
+	SELECT
+		t0.ZipCode
+		,COUNT(t2.Identifier)
+	FROM
+		City AS t0
+	LEFT JOIN
+		Address AS t1 ON t0.Identifier = t1.IdentifierCity
+	LEFT JOIN
+		AddressContact AS t2 ON t1.Identifier = t2.IdentifierAddress
+	GROUP BY
+		t0.ZipCode
 	/*
 	5.B : les codes postaux sans contact sont à ignorer
 	*/
+	SELECT
+		t0.ZipCode
+		,COUNT(t2.Identifier)
+	FROM
+		City AS t0
+	INNER JOIN
+		Address AS t1 ON t0.Identifier = t1.IdentifierCity
+	INNER JOIN
+		AddressContact AS t2 ON t1.Identifier = t2.IdentifierAddress
+	GROUP BY
+		t0.ZipCode
 
 /*
 6 : Afficher la moyenne d'âge (en valeur décimal) par code postal
     Afficher NULL si pas de contact
 	Si une personne n'a pas d'âge, il ne faut pas en tenir compte
 */
+	SELECT
+		t0.ZipCode
+		,AVG(CAST(t3.Age AS DECIMAL(5, 2))) AS AverageAge
+	FROM
+		City AS t0
+	LEFT JOIN
+		Address AS t1 ON t0.Identifier = t1.IdentifierCity
+	LEFT JOIN
+		AddressContact AS t2 ON t1.Identifier = t2.IdentifierAddress
+	LEFT JOIN
+		Contact AS t3 ON t2.IdentifierContact = t3.Identifier
+	GROUP BY
+		t0.ZipCode
+
 	
 /*
 7 : Afficher la moyenne d'âge (en valeur décimal)
@@ -567,3 +675,37 @@ Pour la projection des exo 1 à 4 : Contact.FullName et Civility.ShortName
 		-> Par code postal
 		-> La moyenne d'âge globale
 */
+
+	SELECT DISTINCT
+		TRIM(CONCAT(t1.StreetNumber + ' ', t1.RoadType + ' ', t1.RoadName + ' ', t0.Name + ' ', '(' + t0.ZipCode + ')')) AS FullAddress
+		,AVG(CAST(t3.Age AS DECIMAL(5, 2))) OVER (PARTITION BY t1.Identifier) 	AS AverageAgePerAddress
+		,AVG(CAST(t3.Age AS DECIMAL(5, 2))) OVER (PARTITION BY t0.Identifier) 	AS AverageAgePerCity
+		,AVG(CAST(t3.Age AS DECIMAL(5, 2))) OVER (PARTITION BY t0.ZipCode) 		AS AverageAgePerZipCode
+		,AVG(CAST(t3.Age AS DECIMAL(5, 2))) OVER () 							AS AverageAge
+	FROM
+		City AS t0
+	INNER JOIN
+		Address AS t1 ON t0.Identifier = t1.IdentifierCity
+	INNER JOIN
+		AddressContact AS t2 ON t1.Identifier = t2.IdentifierAddress
+	INNER JOIN
+		Contact AS t3 ON t2.IdentifierContact = t3.Identifier
+
+	SELECT 
+		TRIM(CONCAT(t1.StreetNumber + ' ', t1.RoadType + ' ', t1.RoadName + ' ', t0.Name + ' ', '(' + t0.ZipCode + ')')) AS FullAddress
+		,AVG(CAST(t3.Age AS DECIMAL(5, 2))) 							AS AverageAge
+	FROM
+		City AS t0
+	INNER JOIN
+		Address AS t1 ON t0.Identifier = t1.IdentifierCity
+	INNER JOIN
+		AddressContact AS t2 ON t1.Identifier = t2.IdentifierAddress
+	INNER JOIN
+		Contact AS t3 ON t2.IdentifierContact = t3.Identifier
+	GROUP BY GROUPING SETS
+	(
+		(t1.StreetNumber, t1.RoadType, t1.RoadName, t0.Name, t0.ZipCode)
+		,(t0.Name, t0.ZipCode)
+		,(t0.ZipCode)
+		,()
+	)
